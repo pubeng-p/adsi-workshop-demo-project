@@ -14,7 +14,7 @@ Thumbs.db
 
 ### Gradle (root) ###
 .gradle/
-backend/
+/backend/
 
 ### Backend (Java / Gradle) ###
 packages/backend/build/
