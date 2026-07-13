@@ -6,7 +6,36 @@ import { Select as SelectPrimitive } from "@base-ui/react/select"
 import { cn } from "@/lib/utils"
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
 
-const Select = SelectPrimitive.Root
+// Base UI の Select.Value は Root の `items`（value→label）が無いと生の value を
+// そのまま表示する。呼び出し側で毎回 items を組むのは重複するため、ラッパーが
+// 子の <SelectItem> を走査して {value, label} を収集し Root に渡す。
+function collectSelectItems(
+  children: React.ReactNode,
+): Array<{ value: unknown; label: React.ReactNode }> {
+  const items: Array<{ value: unknown; label: React.ReactNode }> = []
+  React.Children.forEach(children, (child) => {
+    if (!React.isValidElement(child)) return
+    const props = child.props as { value?: unknown; children?: React.ReactNode }
+    if (child.type === SelectItem && props.value !== undefined) {
+      items.push({ value: props.value, label: props.children })
+    } else if (props.children) {
+      items.push(...collectSelectItems(props.children))
+    }
+  })
+  return items
+}
+
+function Select<Value, Multiple extends boolean | undefined = false>({
+  children,
+  ...props
+}: SelectPrimitive.Root.Props<Value, Multiple>) {
+  const items = React.useMemo(() => collectSelectItems(children), [children])
+  return (
+    <SelectPrimitive.Root items={items} {...props}>
+      {children}
+    </SelectPrimitive.Root>
+  )
+}
 
 function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   return (
