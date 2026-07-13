@@ -137,6 +137,24 @@ class SecurityAccessControlIntegrationTest {
                     .param("month", "2024-06"))
                 .andExpect(status().isUnauthorized());
         }
+
+        @Test
+        @DisplayName("PUT /api/attendance/{id}/memo")
+        void updateMemo() throws Exception {
+            mockMvc.perform(put("/api/attendance/{id}/memo", UUID.randomUUID())
+                    .with(csrf())
+                    .param("editorId", employeeId.toString())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"memo\":\"テスト\",\"version\":0}"))
+                .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        @DisplayName("GET /api/attendance/{id}/memo/history")
+        void getMemoEditHistory() throws Exception {
+            mockMvc.perform(get("/api/attendance/{id}/memo/history", UUID.randomUUID()))
+                .andExpect(status().isUnauthorized());
+        }
     }
 
     @Nested
@@ -267,6 +285,37 @@ class SecurityAccessControlIntegrationTest {
                     .session(employeeSession)
                     .param("employeeId", employeeId.toString())
                     .param("month", "2024-06"))
+                .andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("PUT /api/attendance/{id}/memo → 認証済みで403にならない")
+        void updateMemo() throws Exception {
+            // まず出勤打刻してレコードを作成
+            var clockInResult = mockMvc.perform(post("/api/attendance/clock-in")
+                    .session(employeeSession)
+                    .with(csrf())
+                    .param("employeeId", employeeId.toString()))
+                .andExpect(status().isCreated())
+                .andReturn();
+            var body = clockInResult.getResponse().getContentAsString();
+            var recordId = com.jayway.jsonpath.JsonPath.read(body, "$.id").toString();
+
+            // メモ更新 — 認可が通ること(403にならないこと)を確認
+            mockMvc.perform(put("/api/attendance/{id}/memo", recordId)
+                    .session(employeeSession)
+                    .with(csrf())
+                    .param("editorId", employeeId.toString())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"memo\":\"更新テスト\",\"version\":0}"))
+                .andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("GET /api/attendance/{id}/memo/history → 認証済みで403にならない")
+        void getMemoEditHistory() throws Exception {
+            mockMvc.perform(get("/api/attendance/{id}/memo/history", UUID.randomUUID())
+                    .session(employeeSession))
                 .andExpect(status().isOk());
         }
     }
