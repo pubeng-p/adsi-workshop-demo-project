@@ -1,3 +1,5 @@
+"use client";
+
 interface MemoInputProps {
   value: string;
   onChange: (value: string) => void;
