@@ -7,8 +7,10 @@ import {
   clockIn,
   clockOut,
   fetchHistory,
+  fetchMemoEditHistory,
   fetchTeamAttendance,
   fetchTodayStatus,
+  updateMemo,
 } from "./attendance-api";
 
 const TODAY_STATUS_KEY = ["attendance", "today"] as const;
@@ -32,7 +34,7 @@ export function useClockIn() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => clockIn(user!.id),
+    mutationFn: (memo?: string) => clockIn(user!.id, memo),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TODAY_STATUS_KEY });
       toast.success("出勤を記録しました");
@@ -48,7 +50,7 @@ export function useClockOut() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => clockOut(user!.id),
+    mutationFn: (memo?: string) => clockOut(user!.id, memo),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TODAY_STATUS_KEY });
       toast.success("退勤を記録しました");
@@ -56,6 +58,32 @@ export function useClockOut() {
     onError: () => {
       toast.error("退勤の記録に失敗しました");
     },
+  });
+}
+
+export function useUpdateMemo() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (params: { recordId: string; memo: string | null; version: number }) =>
+      updateMemo(params.recordId, user!.id, { memo: params.memo, version: params.version }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: TODAY_STATUS_KEY });
+      queryClient.invalidateQueries({ queryKey: HISTORY_KEY });
+      toast.success("メモを更新しました");
+    },
+    onError: () => {
+      toast.error("メモの更新に失敗しました");
+    },
+  });
+}
+
+export function useMemoEditHistory(recordId: string | null) {
+  return useQuery({
+    queryKey: ["attendance", "memo-history", recordId],
+    queryFn: () => fetchMemoEditHistory(recordId!),
+    enabled: !!recordId,
   });
 }
 

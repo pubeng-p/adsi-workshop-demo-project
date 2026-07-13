@@ -11,7 +11,9 @@ public record AttendanceRecordResponse(
     LocalDate workDate,
     Instant clockIn,
     Instant clockOut,
-    boolean corrected
+    boolean corrected,
+    String memo,
+    Long version
 ) {
     public static AttendanceRecordResponse from(AttendanceRecord record) {
         return new AttendanceRecordResponse(
@@ -19,7 +21,9 @@ public record AttendanceRecordResponse(
             record.getWorkDate(),
             record.getClockIn(),
             record.getClockOut(),
-            record.isCorrected()
+            record.isCorrected(),
+            record.getMemo(),
+            record.getVersion()
         );
     }
 }
