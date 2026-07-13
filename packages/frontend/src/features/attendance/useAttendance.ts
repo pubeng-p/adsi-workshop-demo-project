@@ -37,6 +37,9 @@ export function useClockIn() {
       queryClient.invalidateQueries({ queryKey: TODAY_STATUS_KEY });
       toast.success("出勤を記録しました");
     },
+    onError: () => {
+      toast.error("出勤の記録に失敗しました");
+    },
   });
 }
 
@@ -49,6 +52,9 @@ export function useClockOut() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TODAY_STATUS_KEY });
       toast.success("退勤を記録しました");
+    },
+    onError: () => {
+      toast.error("退勤の記録に失敗しました");
     },
   });
 }
