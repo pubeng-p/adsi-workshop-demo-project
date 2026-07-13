@@ -73,9 +73,11 @@ class AttendanceControllerTest {
                 LocalDate.of(2025, 1, 15),
                 Instant.parse("2025-01-15T00:00:00Z"),
                 null,
-                false
+                false,
+                null,
+                0L
         );
-        when(attendanceService.clockIn(EMPLOYEE_ID)).thenReturn(response);
+        when(attendanceService.clockIn(EMPLOYEE_ID, null)).thenReturn(response);
 
         // Act & Assert
         mockMvc.perform(post("/api/attendance/clock-in")
@@ -94,9 +96,11 @@ class AttendanceControllerTest {
                 LocalDate.of(2025, 1, 15),
                 Instant.parse("2025-01-14T23:00:00Z"),
                 Instant.parse("2025-01-15T08:00:00Z"),
-                false
+                false,
+                null,
+                0L
         );
-        when(attendanceService.clockOut(EMPLOYEE_ID)).thenReturn(response);
+        when(attendanceService.clockOut(EMPLOYEE_ID, null)).thenReturn(response);
 
         // Act & Assert
         mockMvc.perform(post("/api/attendance/clock-out")

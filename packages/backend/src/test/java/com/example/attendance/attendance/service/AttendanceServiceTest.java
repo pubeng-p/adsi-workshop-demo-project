@@ -2,11 +2,14 @@ package com.example.attendance.attendance.service;
 
 import com.example.attendance.attendance.domain.AttendanceStatus;
 import com.example.attendance.attendance.entity.AttendanceRecord;
+import com.example.attendance.attendance.entity.MemoEditHistory;
 import com.example.attendance.attendance.repository.AttendanceRecordRepository;
+import com.example.attendance.attendance.repository.MemoEditHistoryRepository;
 import com.example.attendance.department.entity.Department;
 import com.example.attendance.employee.entity.Employee;
 import com.example.attendance.employee.entity.Role;
 import com.example.attendance.employee.repository.EmployeeRepository;
+import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -45,6 +48,9 @@ class AttendanceServiceTest {
     @Mock
     private EmployeeRepository employeeRepository;
 
+    @Mock
+    private MemoEditHistoryRepository memoEditHistoryRepository;
+
     private AttendanceServiceImpl service;
 
     private Employee employee;
@@ -53,7 +59,7 @@ class AttendanceServiceTest {
     @BeforeEach
     void setUp() {
         var clock = Clock.fixed(FIXED_INSTANT, ZONE_TOKYO);
-        service = new AttendanceServiceImpl(attendanceRepository, employeeRepository, clock);
+        service = new AttendanceServiceImpl(attendanceRepository, employeeRepository, memoEditHistoryRepository, clock);
 
         department = Department.builder()
                 .id(UUID.randomUUID())
@@ -87,7 +93,7 @@ class AttendanceServiceTest {
                     .thenAnswer(invocation -> invocation.getArgument(0));
 
             // Act
-            var result = service.clockIn(employee.getId());
+            var result = service.clockIn(employee.getId(), null);
 
             // Assert
             assertThat(result.workDate()).isEqualTo(TODAY_TOKYO);
@@ -114,7 +120,7 @@ class AttendanceServiceTest {
                     .thenReturn(Optional.of(openRecord));
 
             // Act & Assert
-            assertThatThrownBy(() -> service.clockIn(employee.getId()))
+            assertThatThrownBy(() -> service.clockIn(employee.getId(), null))
                     .isInstanceOf(ResponseStatusException.class)
                     .hasMessageContaining("Already clocked in today");
         }
@@ -141,7 +147,7 @@ class AttendanceServiceTest {
                     .thenAnswer(invocation -> invocation.getArgument(0));
 
             // Act
-            var result = service.clockOut(employee.getId());
+            var result = service.clockOut(employee.getId(), null);
 
             // Assert
             assertThat(result.clockOut()).isEqualTo(FIXED_INSTANT);
@@ -155,7 +161,7 @@ class AttendanceServiceTest {
                     .thenReturn(Optional.empty());
 
             // Act & Assert
-            assertThatThrownBy(() -> service.clockOut(employee.getId()))
+            assertThatThrownBy(() -> service.clockOut(employee.getId(), null))
                     .isInstanceOf(ResponseStatusException.class)
                     .hasMessageContaining("No active clock-in found");
         }
