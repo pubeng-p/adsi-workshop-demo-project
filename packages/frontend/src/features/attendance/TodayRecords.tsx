@@ -1,12 +1,17 @@
 "use client";
 
+import { Pencil } from "lucide-react";
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { AttendanceRecordResponse } from "./attendance-api";
 import { formatTime } from "./format";
+import { MemoEditDialog } from "./MemoEditDialog";
 import { useTodayStatus } from "./useAttendance";
 
 export function TodayRecords() {
   const { data: todayStatus, isLoading } = useTodayStatus();
+  const [editingRecord, setEditingRecord] = useState<AttendanceRecordResponse | null>(null);
 
   if (isLoading) {
     return (
@@ -44,11 +49,33 @@ export function TodayRecords() {
               <span className="font-medium">
                 {record.clockOut ? formatTime(record.clockOut) : "--:--"}
               </span>
+              {record.memo && <span className="text-xs text-muted-foreground">{record.memo}</span>}
             </div>
-            {record.corrected && <Badge variant="outline">修正済み</Badge>}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                aria-label="メモ編集"
+                onClick={() => setEditingRecord(record)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <Pencil className="h-3 w-3" />
+              </button>
+              {record.corrected && <Badge variant="outline">修正済み</Badge>}
+            </div>
           </div>
         ))}
       </div>
+      {editingRecord && (
+        <MemoEditDialog
+          open={!!editingRecord}
+          onOpenChange={(open) => {
+            if (!open) setEditingRecord(null);
+          }}
+          recordId={editingRecord.id}
+          currentMemo={editingRecord.memo}
+          version={0}
+        />
+      )}
     </div>
   );
 }

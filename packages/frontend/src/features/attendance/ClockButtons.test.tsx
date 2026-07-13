@@ -1,7 +1,7 @@
 import { render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
-import { type Mock, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { ClockButtons } from "./ClockButtons";
 import { useClockIn, useClockOut, useTodayStatus } from "./useAttendance";
 
@@ -19,12 +19,14 @@ vi.mock("@/components/ui/skeleton", () => ({
 const mockClockInMutate = vi.fn();
 const mockClockOutMutate = vi.fn();
 
-function setupMocks(overrides: {
-  status?: "NOT_CLOCKED_IN" | "CLOCKED_IN" | "CLOCKED_OUT";
-  isLoading?: boolean;
-  clockInPending?: boolean;
-  clockOutPending?: boolean;
-} = {}) {
+function setupMocks(
+  overrides: {
+    status?: "NOT_CLOCKED_IN" | "CLOCKED_IN" | "CLOCKED_OUT";
+    isLoading?: boolean;
+    clockInPending?: boolean;
+    clockOutPending?: boolean;
+  } = {},
+) {
   const {
     status = "NOT_CLOCKED_IN",
     isLoading = false,

@@ -51,6 +51,19 @@ const columns: Column<DailyAttendanceResponse>[] = [
     render: (day) => (day.overtimeMinutes > 0 ? formatMinutes(day.overtimeMinutes) : "-"),
   },
   {
+    key: "memo",
+    header: "メモ",
+    render: (day) => {
+      const record = day.records[0];
+      if (!record?.memo) return null;
+      return (
+        <span className="text-sm truncate max-w-[150px] inline-block" title={record.memo}>
+          {record.memo}
+        </span>
+      );
+    },
+  },
+  {
     key: "corrected",
     header: "",
     render: (day) => (hasCorrected(day) ? <Badge variant="outline">修正</Badge> : null),

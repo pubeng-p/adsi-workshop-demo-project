@@ -5,11 +5,14 @@ import com.example.attendance.attendance.domain.WorkDuration;
 import com.example.attendance.attendance.dto.AttendanceHistoryResponse;
 import com.example.attendance.attendance.dto.AttendanceRecordResponse;
 import com.example.attendance.attendance.dto.DailyAttendanceResponse;
+import com.example.attendance.attendance.dto.MemoEditHistoryResponse;
 import com.example.attendance.attendance.dto.MonthlySummaryResponse;
 import com.example.attendance.attendance.dto.TeamMemberSummaryResponse;
 import com.example.attendance.attendance.dto.TodayStatusResponse;
 import com.example.attendance.attendance.entity.AttendanceRecord;
+import com.example.attendance.attendance.entity.MemoEditHistory;
 import com.example.attendance.attendance.repository.AttendanceRecordRepository;
+import com.example.attendance.attendance.repository.MemoEditHistoryRepository;
 import com.example.attendance.employee.entity.Employee;
 import com.example.attendance.employee.repository.EmployeeRepository;
 import com.github.f4b6a3.uuid.UuidCreator;
@@ -37,20 +40,23 @@ public class AttendanceServiceImpl implements AttendanceService {
 
     private final AttendanceRecordRepository attendanceRepository;
     private final EmployeeRepository employeeRepository;
+    private final MemoEditHistoryRepository memoEditHistoryRepository;
     private final Clock clock;
 
     public AttendanceServiceImpl(
             AttendanceRecordRepository attendanceRepository,
             EmployeeRepository employeeRepository,
+            MemoEditHistoryRepository memoEditHistoryRepository,
             Clock clock) {
         this.attendanceRepository = attendanceRepository;
         this.employeeRepository = employeeRepository;
+        this.memoEditHistoryRepository = memoEditHistoryRepository;
         this.clock = clock;
     }
 
     @Override
     @Transactional
-    public AttendanceRecordResponse clockIn(UUID employeeId) {
+    public AttendanceRecordResponse clockIn(UUID employeeId, String memo) {
         var employee = findEmployeeOrThrow(employeeId);
         var today = LocalDate.now(clock);
 
@@ -65,6 +71,7 @@ public class AttendanceServiceImpl implements AttendanceService {
                 .employee(employee)
                 .workDate(today)
                 .clockIn(now)
+                .memo(memo)
                 .corrected(false)
                 .build();
 
@@ -75,12 +82,15 @@ public class AttendanceServiceImpl implements AttendanceService {
 
     @Override
     @Transactional
-    public AttendanceRecordResponse clockOut(UUID employeeId) {
+    public AttendanceRecordResponse clockOut(UUID employeeId, String memo) {
         var today = LocalDate.now(clock);
         var record = attendanceRepository.findByEmployeeIdAndWorkDateAndClockOutIsNull(employeeId, today)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT, "No active clock-in found"));
 
         record.setClockOut(Instant.now(clock));
+        if (memo != null) {
+            record.setMemo(memo);
+        }
         var saved = attendanceRepository.save(record);
         log.info("Clock-out recorded for employee={} at={}", employeeId, saved.getClockOut());
         return AttendanceRecordResponse.from(saved);
@@ -138,6 +148,40 @@ public class AttendanceServiceImpl implements AttendanceService {
             employees = employeeRepository.findAll();
         }
         return buildTeamSummaries(employees, month);
+    }
+
+    @Override
+    @Transactional
+    public AttendanceRecordResponse updateMemo(UUID recordId, UUID editorId, String memo, Long version) {
+        var record = attendanceRepository.findById(recordId)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "AttendanceRecord with id '%s' was not found".formatted(recordId)));
+        var editor = findEmployeeOrThrow(editorId);
+
+        var oldMemo = record.getMemo();
+        record.setMemo(memo);
+        var saved = attendanceRepository.save(record);
+
+        var history = MemoEditHistory.builder()
+                .id(UuidCreator.getTimeOrderedEpoch())
+                .attendanceRecord(saved)
+                .editor(editor)
+                .oldMemo(oldMemo)
+                .newMemo(memo)
+                .editedAt(Instant.now(clock))
+                .build();
+        memoEditHistoryRepository.save(history);
+
+        log.info("Memo updated for record={} by editor={}", recordId, editorId);
+        return AttendanceRecordResponse.from(saved);
+    }
+
+    @Override
+    public List<MemoEditHistoryResponse> getMemoEditHistory(UUID recordId) {
+        return memoEditHistoryRepository.findByAttendanceRecordIdOrderByEditedAtDesc(recordId)
+                .stream()
+                .map(MemoEditHistoryResponse::from)
+                .toList();
     }
 
     private List<TeamMemberSummaryResponse> buildTeamSummaries(List<Employee> employees, String month) {

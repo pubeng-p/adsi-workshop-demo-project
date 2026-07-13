@@ -4,6 +4,7 @@ import { LogIn, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatTime } from "./format";
+import { MemoInput } from "./MemoInput";
 import { useClockIn, useClockOut, useTodayStatus } from "./useAttendance";
 
 function CurrentTime() {
@@ -45,6 +46,7 @@ const STATUS_LABELS = {
 } as const;
 
 export function ClockButtons() {
+  const [memo, setMemo] = useState("");
   const { data: todayStatus, isLoading } = useTodayStatus();
   const clockInMutation = useClockIn();
   const clockOutMutation = useClockOut();
@@ -80,11 +82,16 @@ export function ClockButtons() {
           </span>
         )}
       </div>
+      <div className="max-w-md mx-auto">
+        <MemoInput value={memo} onChange={setMemo} disabled={isPending} />
+      </div>
       <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
         <button
           type="button"
           disabled={!canClockIn || isPending}
-          onClick={() => clockInMutation.mutate()}
+          onClick={() => {
+            clockInMutation.mutate(memo || undefined, { onSuccess: () => setMemo("") });
+          }}
           className="flex flex-col items-center justify-center gap-2 rounded-xl bg-green-500 py-8 text-white transition-colors hover:bg-green-600 active:bg-green-700 disabled:bg-gray-200 disabled:text-gray-400"
         >
           <LogIn className="h-8 w-8" />
@@ -93,7 +100,9 @@ export function ClockButtons() {
         <button
           type="button"
           disabled={!canClockOut || isPending}
-          onClick={() => clockOutMutation.mutate()}
+          onClick={() => {
+            clockOutMutation.mutate(memo || undefined, { onSuccess: () => setMemo("") });
+          }}
           className="flex flex-col items-center justify-center gap-2 rounded-xl bg-orange-500 py-8 text-white transition-colors hover:bg-orange-600 active:bg-orange-700 disabled:bg-gray-200 disabled:text-gray-400"
         >
           <LogOut className="h-8 w-8" />
