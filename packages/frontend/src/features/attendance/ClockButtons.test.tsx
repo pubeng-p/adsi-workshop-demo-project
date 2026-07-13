@@ -1,4 +1,5 @@
 import { render } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { createElement } from "react";
 import { type Mock, beforeEach, describe, expect, it, vi } from "vitest";
 import { ClockButtons } from "./ClockButtons";
@@ -57,19 +58,95 @@ describe("ClockButtons", () => {
     vi.clearAllMocks();
   });
 
-  describe("Issue #1: 出勤ボタンが連続クリック可能", () => {
-    it("CLOCKED_IN 状態では出勤ボタンが無効化される", () => {
+  describe("NOT_CLOCKED_IN 状態", () => {
+    it("出勤ボタンが有効である", () => {
+      setupMocks({ status: "NOT_CLOCKED_IN" });
+      const { container } = render(<ClockButtons />);
+
+      expect(getButtonByText(container, "出勤")).toBeEnabled();
+    });
+
+    it("退勤ボタンが無効化される", () => {
+      setupMocks({ status: "NOT_CLOCKED_IN" });
+      const { container } = render(<ClockButtons />);
+
+      expect(getButtonByText(container, "退勤")).toBeDisabled();
+    });
+
+    it("出勤ボタンクリックで mutate が呼ばれる", async () => {
+      setupMocks({ status: "NOT_CLOCKED_IN" });
+      const { container } = render(<ClockButtons />);
+      const user = userEvent.setup();
+      const btn = getButtonByText(container, "出勤");
+
+      expect(btn).toBeDefined();
+      await user.click(btn as HTMLElement);
+
+      expect(mockClockInMutate).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("CLOCKED_IN 状態", () => {
+    it("出勤ボタンが無効化される", () => {
       setupMocks({ status: "CLOCKED_IN" });
       const { container } = render(<ClockButtons />);
 
       expect(getButtonByText(container, "出勤")).toBeDisabled();
     });
 
-    it("CLOCKED_IN 状態では退勤ボタンが有効である", () => {
+    it("退勤ボタンが有効である", () => {
       setupMocks({ status: "CLOCKED_IN" });
       const { container } = render(<ClockButtons />);
 
       expect(getButtonByText(container, "退勤")).toBeEnabled();
+    });
+
+    it("退勤ボタンクリックで mutate が呼ばれる", async () => {
+      setupMocks({ status: "CLOCKED_IN" });
+      const { container } = render(<ClockButtons />);
+      const user = userEvent.setup();
+      const btn = getButtonByText(container, "退勤");
+
+      expect(btn).toBeDefined();
+      await user.click(btn as HTMLElement);
+
+      expect(mockClockOutMutate).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("CLOCKED_OUT 状態", () => {
+    it("出勤ボタンが無効化される", () => {
+      setupMocks({ status: "CLOCKED_OUT" });
+      const { container } = render(<ClockButtons />);
+
+      expect(getButtonByText(container, "出勤")).toBeDisabled();
+    });
+
+    it("退勤ボタンが無効化される", () => {
+      setupMocks({ status: "CLOCKED_OUT" });
+      const { container } = render(<ClockButtons />);
+
+      expect(getButtonByText(container, "退勤")).toBeDisabled();
+    });
+  });
+
+  describe("ペンディング中", () => {
+    it("mutation 実行中は両ボタンが無効化される", () => {
+      setupMocks({ status: "NOT_CLOCKED_IN", clockInPending: true });
+      const { container } = render(<ClockButtons />);
+
+      expect(getButtonByText(container, "出勤")).toBeDisabled();
+      expect(getButtonByText(container, "退勤")).toBeDisabled();
+    });
+  });
+
+  describe("ローディング中", () => {
+    it("スケルトンが表示される", () => {
+      setupMocks({ isLoading: true });
+      const { container } = render(<ClockButtons />);
+
+      expect(container.querySelectorAll("[data-testid='skeleton']").length).toBeGreaterThan(0);
+      expect(getButtonByText(container, "出勤")).toBeUndefined();
     });
   });
 });
